@@ -100,7 +100,7 @@
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight mb-3">
         Solicitação Recebida!
       </h1>
-      <p class="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-lg mx-auto mb-6">
+      <p id="leadGreeting" class="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-lg mx-auto mb-6">
         Recebemos as informações da sua instituição com sucesso. Nossa equipe de especialistas em crescimento escolar já está analisando o cenário da sua escola.
       </p>
 
@@ -164,6 +164,25 @@
   <footer class="relative z-20 py-6 border-t border-white/5 text-center text-[10px] font-mono uppercase tracking-[0.2em] text-slate-500">
     MeuDiretor © 2026 • Consultoria + Execução + CRM + IA
   </footer>
+
+  <script>
+    (function () {
+      try {
+        var rawLead = localStorage.getItem('meudiretor_lead');
+        if (rawLead) {
+          var lead = JSON.parse(rawLead);
+          if (lead && lead.name) {
+            var firstName = lead.name.trim().split(' ')[0];
+            var greetingEl = document.getElementById('leadGreeting');
+            if (greetingEl) {
+              var escolaTxt = lead.escola ? ' da <strong>' + lead.escola + '</strong>' : '';
+              greetingEl.innerHTML = 'Olá, <strong>' + firstName + '</strong>! Recebemos as informações' + escolaTxt + ' com sucesso. Nossa equipe de especialistas em crescimento escolar já está analisando o seu cenário.';
+            }
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
 
 </body>
 </html>

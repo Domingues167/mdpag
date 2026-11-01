@@ -347,6 +347,41 @@
       box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.25);
     }
 
+    .rx-input.input-error,
+    .rx-select.input-error {
+      border-color: #EF4444 !important;
+      background-color: rgba(239, 68, 68, 0.08) !important;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35) !important;
+    }
+
+    .field-error-msg {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #F87171;
+      margin-top: 5px;
+      margin-left: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      animation: fadeInError 0.2s ease-out;
+    }
+
+    @keyframes fadeInError {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shake-btn {
+      animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+      40%, 60% { transform: translate3d(3px, 0, 0); }
+    }
+
     /* Phone mask flag */
     .rx-phone-wrapper {
       position: relative;
@@ -1284,12 +1319,129 @@
         if (el && val) el.value = val;
       });
 
-      // Submit Form redirect to MeuDiretor appointment
+      // Submit Form redirect to MeuDiretor appointment with strict validation
       const form = document.getElementById('strategicLeadForm');
       if (form) {
+        const nameInput = document.getElementById('nameInput');
+        const whatsappInput = document.getElementById('whatsappInput');
+        const emailInput = document.getElementById('emailInput');
+        const escolaInput = document.getElementById('escolaInput');
+        const alunosSelect = document.getElementById('alunosSelect');
+        const btn = document.getElementById('submitButton');
+
+        function clearFieldError(input) {
+          if (!input) return;
+          input.classList.remove('input-error');
+          const parent = input.closest('div');
+          if (parent) {
+            const errorMsg = parent.querySelector('.field-error-msg');
+            if (errorMsg) errorMsg.remove();
+          }
+        }
+
+        function setFieldError(input, message) {
+          if (!input) return;
+          input.classList.add('input-error');
+          const parent = input.closest('div');
+          if (parent) {
+            let errorMsg = parent.querySelector('.field-error-msg');
+            if (!errorMsg) {
+              errorMsg = document.createElement('div');
+              errorMsg.className = 'field-error-msg';
+              parent.appendChild(errorMsg);
+            }
+            errorMsg.innerHTML = '<svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg> <span>' + message + '</span>';
+          }
+        }
+
+        [nameInput, whatsappInput, emailInput, escolaInput, alunosSelect].forEach(function(el) {
+          if (!el) return;
+          el.addEventListener('input', function() { clearFieldError(el); });
+          el.addEventListener('change', function() { clearFieldError(el); });
+        });
+
         form.addEventListener('submit', function (e) {
           e.preventDefault();
-          const btn = document.getElementById('submitButton');
+          let hasError = false;
+          let firstInvalid = null;
+
+          // 1. Name validation
+          const nameVal = (nameInput.value || '').trim();
+          if (!nameVal || nameVal.length < 3) {
+            setFieldError(nameInput, 'Por favor, informe seu nome completo.');
+            hasError = true;
+            if (!firstInvalid) firstInvalid = nameInput;
+          } else {
+            clearFieldError(nameInput);
+          }
+
+          // 2. WhatsApp validation (at least 10 digits)
+          const rawPhone = (whatsappInput.value || '').replace(/\D/g, '');
+          if (rawPhone.length < 10) {
+            setFieldError(whatsappInput, 'Digite seu WhatsApp com DDD (ex: (11) 99999-9999).');
+            hasError = true;
+            if (!firstInvalid) firstInvalid = whatsappInput;
+          } else {
+            clearFieldError(whatsappInput);
+          }
+
+          // 3. Email validation
+          const emailVal = (emailInput.value || '').trim();
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailVal || !emailRegex.test(emailVal)) {
+            setFieldError(emailInput, 'Por favor, informe um e-mail válido.');
+            hasError = true;
+            if (!firstInvalid) firstInvalid = emailInput;
+          } else {
+            clearFieldError(emailInput);
+          }
+
+          // 4. Escola / Cargo validation
+          const escolaVal = (escolaInput.value || '').trim();
+          if (!escolaVal || escolaVal.length < 2) {
+            setFieldError(escolaInput, 'Informe o nome da escola e seu cargo.');
+            hasError = true;
+            if (!firstInvalid) firstInvalid = escolaInput;
+          } else {
+            clearFieldError(escolaInput);
+          }
+
+          // 5. Quantidade de alunos validation
+          const alunosVal = alunosSelect.value;
+          if (!alunosVal || alunosVal === '') {
+            setFieldError(alunosSelect, 'Selecione a quantidade de alunos da escola.');
+            hasError = true;
+            if (!firstInvalid) firstInvalid = alunosSelect;
+          } else {
+            clearFieldError(alunosSelect);
+          }
+
+          // If validation fails, block progression
+          if (hasError) {
+            if (btn) {
+              btn.classList.add('shake-btn');
+              setTimeout(function() { btn.classList.remove('shake-btn'); }, 500);
+            }
+            if (firstInvalid) {
+              firstInvalid.focus();
+            }
+            return;
+          }
+
+          // If valid: Save lead data to localStorage
+          try {
+            const leadData = {
+              name: nameVal,
+              whatsapp: whatsappInput.value,
+              email: emailVal,
+              escola: escolaVal,
+              alunos: alunosVal,
+              submitted_at: new Date().toISOString()
+            };
+            localStorage.setItem('meudiretor_lead', JSON.stringify(leadData));
+          } catch(err) {}
+
+          // Loading state & redirect to thank you page
           if (btn) {
             btn.disabled = true;
             btn.innerHTML = '<span>RECEBENDO DADOS...</span>';
